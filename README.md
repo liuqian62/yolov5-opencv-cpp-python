@@ -1,6 +1,6 @@
 # yolov5-opencv-cpp-python
 
-Example of performing inference with ultralytics YOLO V5, OpenCV 4.5.4 DNN, C++ and Python 
+Example of performing inference with ultralytics YOLO V5, OpenCV 4.5.4 DNN, C++ and Python
 
 Looking for YOLO V4 OpenCV C++/Python inference? [Check this repository](https://github.com/doleron/yolov4-opencv-cpp-python)
 
@@ -46,18 +46,27 @@ The C++ code is [here](cpp/yolo.cpp).
 ```bash
 git clone https://github.com/doleron/yolov5-opencv-cpp-python.git
 cd yolov5-opencv-cpp-python
-g++ -O3 cpp/yolo.cpp -o yolo_example `pkg-config --cflags --libs opencv4`
-./yolo_example
+mkdir build
+cd build
+cmake ..
+make -j8
+./yolo_example ../config_files/yolov5config.yaml
+
 ```
 
 Or using CUDA if available:
 
 ```bash
-git clone https://github.com/doleron/yolov5-opencv-cpp-python.git
-cd yolov5-opencv-cpp-python
-g++ -O3 cpp/yolo.cpp -o yolo_example `pkg-config --cflags --libs opencv4`
-./yolo_example cuda
+%YAML:1.0  
+---  
+filepath_classes: "classes.txt" 
+filepath_onnx: "yolov5s.onnx" 
+filepath_input: "../sample.mp4" 
+is_cuda: true
+save_result: true
+filepath_output: "../output_sample.mp4" 
 ```
+
 ![running the examples](https://github.com/doleron/yolov5-opencv-cpp-python/raw/main/yolov5.png)
 
 PS.: Video sample from [https://www.youtube.com/watch?v=NyLF8nHIquM](https://www.youtube.com/watch?v=NyLF8nHIquM)
@@ -77,6 +86,7 @@ git clone https://github.com/ultralytics/yolov5
 cd yolov5
 pip install -r requirements.txt
 ```
+
 And then to convert the model:
 
 ```bash
@@ -101,6 +111,7 @@ Detect with `python detect.py --weights yolov5n.onnx` or `model = torch.hub.load
 Validate with `python val.py --weights yolov5n.onnx`
 $ 
 ```
+
 ### throubleshooting
 
 First time I got an error with protobuf version:

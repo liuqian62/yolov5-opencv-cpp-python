@@ -1,5 +1,5 @@
 #include <fstream>
-
+#include <iostream>  
 #include <opencv2/opencv.hpp>
 
 std::vector<std::string> load_class_list()
@@ -14,9 +14,39 @@ std::vector<std::string> load_class_list()
     return class_list;
 }
 
+std::vector<std::string> load_class_list(std::string filepath_classes)
+{
+    std::vector<std::string> class_list;
+    std::ifstream ifs(filepath_classes);
+    std::string line;
+    while (getline(ifs, line))
+    {
+        class_list.push_back(line);
+    }
+    return class_list;
+}
+
 void load_net(cv::dnn::Net &net, bool is_cuda)
 {
     auto result = cv::dnn::readNet("config_files/yolov5s.onnx");
+    if (is_cuda)
+    {
+        std::cout << "Attempty to use CUDA\n";
+        result.setPreferableBackend(cv::dnn::DNN_BACKEND_CUDA);
+        result.setPreferableTarget(cv::dnn::DNN_TARGET_CUDA_FP16);
+    }
+    else
+    {
+        std::cout << "Running on CPU\n";
+        result.setPreferableBackend(cv::dnn::DNN_BACKEND_OPENCV);
+        result.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
+    }
+    net = result;
+}
+
+void load_net(cv::dnn::Net &net, bool is_cuda, std::string filepath_onnx)
+{
+    auto result = cv::dnn::readNet(filepath_onnx);
     if (is_cuda)
     {
         std::cout << "Attempty to use CUDA\n";
@@ -125,26 +155,82 @@ void detect(cv::Mat &image, cv::dnn::Net &net, std::vector<Detection> &output, c
 
 int main(int argc, char **argv)
 {
+    std::string yolo_config = "";
+    if (argc == 2)
+    {
+        yolo_config = argv[1];
+    }else{
+        printf("please intput: yolo_example [config file] \n"
+               "for example: yolo_example ../config_files/yolov5config.yaml"
+               "\n");
+        return -1;
+    }
+    std::cout << "yolo_config: " << yolo_config << std::endl;
+    std::string relative_folder = yolo_config.substr(0, yolo_config.find_last_of('/')) + "/";
+    // 打开 YAML 文件  
+    cv::FileStorage fs(yolo_config, cv::FileStorage::READ);  
+    
+    if (!fs.isOpened()) {  
+        std::cerr << "Failed to open config file!" << std::endl;  
+        return -1;  
+    }  
+    std::string filepath_classes, filepath_onnx, filepath_input, filepath_output;
+    bool is_cuda, save_result;
+    try {  
+        // // 读取矩阵  
+        // cv::Mat camera_matrix, dist_coeffs;  
+        // fs["camera_matrix"] >> camera_matrix;  
+        // fs["distortion_coeffs"] >> dist_coeffs;  
+        
+        // // 读取基本类型  
+        // int width = (int)fs["image_width"];  
+        // double threshold = (double)fs["threshold"];  
 
-    std::vector<std::string> class_list = load_class_list();
+        fs["filepath_classes"] >> filepath_classes;  
+        fs["filepath_onnx"] >> filepath_onnx; 
+        fs["filepath_input"] >> filepath_input; 
+        fs["filepath_output"] >> filepath_output; 
+        is_cuda = (int)fs["is_cuda"] != 0; 
+        save_result = (int)fs["save_result"] != 0; 
+        } catch (const cv::Exception& e) {  
+        std::cerr << "Error reading config file: " << e.what() << std::endl;  
+        fs.release();  
+        return -1;  
+    } 
+    // 关闭文件  
+    fs.release(); 
+
+    std::vector<std::string> class_list = load_class_list(relative_folder+filepath_classes);
 
     cv::Mat frame;
-    cv::VideoCapture capture("sample.mp4");
+    // cv::VideoCapture capture("sample.mp4");
+    cv::VideoCapture capture(relative_folder+filepath_input);
     if (!capture.isOpened())
     {
         std::cerr << "Error opening video file\n";
         return -1;
     }
 
-    bool is_cuda = argc > 1 && strcmp(argv[1], "cuda") == 0;
+    
 
     cv::dnn::Net net;
-    load_net(net, is_cuda);
+    load_net(net, is_cuda, relative_folder+filepath_onnx);
 
     auto start = std::chrono::high_resolution_clock::now();
     int frame_count = 0;
     float fps = -1;
     int total_frames = 0;
+
+    // 创建视频写入对象  
+    cv::VideoWriter video(relative_folder + filepath_output,   
+                     cv::VideoWriter::fourcc('a','v','c','1'), // H.264编码  
+                     30.0, // 帧率  
+                     cv::Size(640, 360));  
+
+    if (!video.isOpened()) {  
+        std::cout << "无法创建视频文件" << std::endl;  
+        return -1;  
+    } 
 
     while (true)
     {
@@ -198,6 +284,11 @@ int main(int argc, char **argv)
         }
 
         cv::imshow("output", frame);
+        if(save_result){
+            // 写入视频文件  
+            video.write(frame);
+        }
+        
 
         if (cv::waitKey(1) != -1)
         {
@@ -206,6 +297,7 @@ int main(int argc, char **argv)
             break;
         }
     }
+    video.release(); 
 
     std::cout << "Total frames: " << total_frames << "\n";
 
