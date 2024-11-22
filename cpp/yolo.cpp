@@ -221,11 +221,12 @@ int main(int argc, char **argv)
     float fps = -1;
     int total_frames = 0;
 
-    // 创建视频写入对象  
+    // 创建视频写入对象
+    capture.read(frame);  
     cv::VideoWriter video(relative_folder + filepath_output,   
                      cv::VideoWriter::fourcc('a','v','c','1'), // H.264编码  
                      30.0, // 帧率  
-                     cv::Size(640, 360));  
+                     cv::Size(frame.cols, frame.rows));  
 
     if (!video.isOpened()) {  
         std::cout << "无法创建视频文件" << std::endl;  
@@ -283,11 +284,13 @@ int main(int argc, char **argv)
             cv::putText(frame, fps_label_str.c_str(), cv::Point(10, 25), cv::FONT_HERSHEY_SIMPLEX, 1, cv::Scalar(0, 0, 255), 2);
         }
 
-        cv::imshow("output", frame);
         if(save_result){
             // 写入视频文件  
             video.write(frame);
         }
+
+        cv::imshow("output", frame);
+        
         
 
         if (cv::waitKey(1) != -1)

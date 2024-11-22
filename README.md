@@ -62,8 +62,8 @@ Or using CUDA if available:
 filepath_classes: "classes.txt" 
 filepath_onnx: "yolov5s.onnx" 
 filepath_input: "../sample.mp4" 
-is_cuda: true
-save_result: true
+is_cuda: 0
+save_result: 1
 filepath_output: "../output_sample.mp4" 
 ```
 
